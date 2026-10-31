@@ -2,15 +2,29 @@
 
 ## 1. System Design
 
+**Three core user actions**
+
+1. Add a pet to the owner's profile (name and species).
+2. Schedule a care task (walk, feeding, medication, appointment) for a specific pet at a specific time, with a frequency such as once, daily, or weekly.
+3. See today's schedule: every task across all pets in time order, with conflicts and completion status visible.
+
 **a. Initial design**
 
-- Briefly describe your initial UML design.
-- What classes did you include, and what responsibilities did you assign to each?
+The initial UML has four classes:
+
+- `Task` (dataclass): one care activity. It holds a description, an "HH:MM" time, a frequency, a duration, a priority, and a completion flag. It knows how to mark itself complete.
+- `Pet` (dataclass): a pet's name and species plus the list of tasks that belong to it. It adds and removes its own tasks.
+- `Owner` (dataclass): holds the owner's name and their pets. It adds pets and gathers tasks across all of them.
+- `Scheduler`: the "brain". It takes an `Owner` and reads tasks through it. It builds today's schedule, sorts by time, filters by pet or status, and detects conflicts. It stores no tasks of its own, so there is a single source of truth.
+
+Relationships: an Owner has many Pets, a Pet has many Tasks, and the Scheduler depends on one Owner.
 
 **b. Design changes**
 
-- Did your design change during implementation?
-- If yes, describe at least one change and why you made it.
+I reviewed the first skeleton and made two changes before implementing anything:
+
+1. `Owner.get_all_tasks()` now returns `(Pet, Task)` pairs instead of bare tasks. A `Task` doesn't know which pet it belongs to, so the Scheduler couldn't filter by pet name or write a useful conflict warning ("Mochi and Biscuit both at 08:00") from a flat task list. Pairs avoid a back-reference from `Task` to `Pet`, which would make the objects circular. `sort_by_time`, `filter_tasks`, and `get_todays_schedule` use the same pair type.
+2. `Task` gained a `due_date` field. Recurring tasks need a date to advance ("today + 1 day" for daily), and "today's schedule" needs a date to filter on. Without it the recurrence logic in Phase 4 would have nothing to work from.
 
 ---
 
