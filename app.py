@@ -72,21 +72,92 @@ else:
 
 st.divider()
 
+scheduler = Scheduler(owner)
+
+
+def task_rows(entries):
+    """Convert (pet, task) pairs into table rows for st.table."""
+    return [
+        {
+            "Date": str(task.due_date),
+            "Time": task.time,
+            "Pet": pet.name,
+            "Task": task.description,
+            "Duration": f"{task.duration_minutes} min",
+            "Priority": task.priority,
+            "Repeats": task.frequency,
+            "Done": "✅" if task.completed else "",
+        }
+        for pet, task in entries
+    ]
+
+
 st.subheader("Today's Schedule")
-schedule = Scheduler(owner).get_todays_schedule()
-if schedule:
-    st.table(
-        [
-            {
-                "Time": task.time,
-                "Pet": pet.name,
-                "Task": task.description,
-                "Duration": f"{task.duration_minutes} min",
-                "Priority": task.priority,
-                "Done": "✅" if task.completed else "",
-            }
-            for pet, task in schedule
-        ]
+todays = scheduler.get_todays_schedule()
+conflicts = scheduler.detect_conflicts()
+if conflicts:
+    st.warning(
+        f"{len(conflicts)} scheduling conflict(s) found. Two tasks share the same start time, "
+        "so you can't do both at once. Move one of them to a different time:"
     )
+    for message in conflicts:
+        st.warning(message, icon="⚠️")
+elif todays:
+    st.success("No conflicts. Your schedule is clear.")
+
+if todays:
+    st.table(task_rows(todays))
 else:
     st.info("Nothing scheduled for today yet.")
+
+st.divider()
+
+st.subheader("Complete a Task")
+if "flash" in st.session_state:
+    st.success(st.session_state.pop("flash"))
+pending = scheduler.sort_by_time(scheduler.filter_tasks(completed=False))
+if pending:
+    choice = st.selectbox(
+        "Pending task",
+        range(len(pending)),
+        format_func=lambda i: (
+            f"{pending[i][1].due_date} {pending[i][1].time} - "
+            f"{pending[i][0].name}: {pending[i][1].description}"
+        ),
+    )
+    if st.button("Mark complete"):
+        pet, task = pending[choice]
+        next_task = scheduler.mark_task_complete(pet, task)
+        if next_task:
+            st.session_state.flash = (
+                f"Completed '{task.description}'. Next {task.frequency} occurrence "
+                f"scheduled for {next_task.due_date} at {next_task.time}."
+            )
+        else:
+            st.session_state.flash = f"Completed '{task.description}'."
+        st.rerun()  # redraw the schedule above with the updated task
+else:
+    st.info("No pending tasks.")
+
+st.divider()
+
+st.subheader("Browse All Tasks")
+if owner.pets:
+    col_pet, col_status = st.columns(2)
+    with col_pet:
+        pet_filter = st.selectbox("Pet", ["All pets"] + [p.name for p in owner.pets])
+    with col_status:
+        status_filter = st.selectbox("Status", ["All", "Pending", "Completed"])
+    completed_value = {"All": None, "Pending": False, "Completed": True}[status_filter]
+    results = scheduler.sort_by_time(
+        scheduler.filter_tasks(
+            pet_name=None if pet_filter == "All pets" else pet_filter,
+            completed=completed_value,
+        )
+    )
+    if results:
+        st.table(task_rows(results))
+    else:
+        st.info("No tasks match these filters.")
+else:
+    st.info("Add a pet to see tasks here.")

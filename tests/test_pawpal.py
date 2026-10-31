@@ -230,3 +230,13 @@ def test_filter_unknown_pet_returns_empty(owner, mochi):
     mochi.add_task(Task("Walk", "07:00"))
 
     assert Scheduler(owner).filter_tasks(pet_name="Rex") == []
+
+
+def test_sort_orders_by_date_before_time(owner, mochi):
+    today = date.today()
+    mochi.add_task(Task("Tomorrow early", "06:00", due_date=today + timedelta(days=1)))
+    mochi.add_task(Task("Today late", "20:00", due_date=today))
+
+    entries = Scheduler(owner).sort_by_time(owner.get_all_tasks())
+
+    assert [task.description for _, task in entries] == ["Today late", "Tomorrow early"]

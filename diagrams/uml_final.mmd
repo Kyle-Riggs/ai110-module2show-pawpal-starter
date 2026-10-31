@@ -1,0 +1,46 @@
+classDiagram
+    %% PetTask below stands for the tuple (Pet, Task) that Owner and Scheduler pass around.
+
+    class Task {
+        <<dataclass>>
+        +str description
+        +str time
+        +date due_date
+        +str frequency
+        +int duration_minutes
+        +str priority
+        +bool completed
+        +mark_complete() Task
+    }
+
+    class Pet {
+        <<dataclass>>
+        +str name
+        +str species
+        +list~Task~ tasks
+        +add_task(task) None
+        +remove_task(task) None
+    }
+
+    class Owner {
+        <<dataclass>>
+        +str name
+        +list~Pet~ pets
+        +add_pet(pet) None
+        +get_all_tasks() list~PetTask~
+    }
+
+    class Scheduler {
+        +Owner owner
+        +get_todays_schedule() list~PetTask~
+        +sort_by_time(entries) list~PetTask~
+        +filter_tasks(pet_name, completed) list~PetTask~
+        +mark_task_complete(pet, task) Task
+        +detect_conflicts() list~str~
+    }
+
+    Owner "1" o-- "*" Pet : has
+    Pet "1" o-- "*" Task : has
+    Scheduler --> Owner : reads tasks through
+    Scheduler ..> Pet : receives with each task
+    Task ..> Task : mark_complete() creates next occurrence
