@@ -1,5 +1,6 @@
-from dataclasses import dataclass, field
-from datetime import date
+from collections import defaultdict
+from dataclasses import dataclass, field, replace
+from datetime import date, timedelta
 
 
 @dataclass
@@ -14,9 +15,14 @@ class Task:
     priority: str = "medium"  # "low", "medium", or "high"
     completed: bool = False
 
-    def mark_complete(self) -> None:
-        """Mark this task as completed."""
+    def mark_complete(self) -> "Task | None":
+        """Mark this task completed and return the next occurrence if it recurs, else None."""
         self.completed = True
+        if self.frequency == "daily":
+            return replace(self, due_date=self.due_date + timedelta(days=1), completed=False)
+        if self.frequency == "weekly":
+            return replace(self, due_date=self.due_date + timedelta(weeks=1), completed=False)
+        return None
 
 
 @dataclass
@@ -72,9 +78,31 @@ class Scheduler:
     def filter_tasks(
         self, pet_name: str | None = None, completed: bool | None = None
     ) -> list[tuple[Pet, Task]]:
-        """Return tasks matching a pet name and/or completion status (Phase 4)."""
-        raise NotImplementedError
+        """Return tasks matching a pet name (case-insensitive) and/or completion status."""
+        return [
+            (pet, task)
+            for pet, task in self.owner.get_all_tasks()
+            if (pet_name is None or pet.name.lower() == pet_name.lower())
+            and (completed is None or task.completed == completed)
+        ]
+
+    def mark_task_complete(self, pet: Pet, task: Task) -> Task | None:
+        """Complete a task and, if it recurs, add its next occurrence to the pet."""
+        next_task = task.mark_complete()
+        if next_task is not None:
+            pet.add_task(next_task)
+        return next_task
 
     def detect_conflicts(self) -> list[str]:
-        """Return warning messages for tasks scheduled at the same time (Phase 4)."""
-        raise NotImplementedError
+        """Return a warning for each date and time with more than one pending task."""
+        slots: dict[tuple[date, str], list[tuple[Pet, Task]]] = defaultdict(list)
+        for pet, task in self.owner.get_all_tasks():
+            if not task.completed:
+                slots[(task.due_date, task.time)].append((pet, task))
+
+        return [
+            f"Conflict on {day} at {time}: "
+            + "; ".join(f"{pet.name} - {task.description}" for pet, task in entries)
+            for (day, time), entries in sorted(slots.items())
+            if len(entries) > 1
+        ]

@@ -52,9 +52,28 @@ Today's Schedule for Jordan
 Time   Pet       Task                    Dur     Priority 
 --------------------------------------------------------------
 07:30  Mochi     Morning walk             30 min high     [ ]
+08:00  Mochi     Grooming                 20 min low      [ ]
 08:00  Luna      Give medication           5 min high     [ ]
 14:15  Luna      Vet appointment          60 min medium   [ ]
 18:00  Mochi     Evening feeding          10 min high     [ ]
+
+Conflict check
+  WARNING: Conflict on 2026-10-31 at 08:00: Mochi - Grooming; Luna - Give medication
+
+Filter: Mochi's tasks
+  2026-10-31 18:00  Mochi  Evening feeding    (daily, pending)
+  2026-10-31 07:30  Mochi  Morning walk       (daily, pending)
+  2026-10-31 08:00  Mochi  Grooming           (once, pending)
+
+Completed 'Morning walk'; next occurrence created for 2026-11-01.
+
+Filter: completed tasks
+  2026-10-31 07:30  Mochi  Morning walk       (daily, done)
+
+Filter: Mochi's pending tasks
+  2026-10-31 18:00  Mochi  Evening feeding    (daily, pending)
+  2026-10-31 08:00  Mochi  Grooming           (once, pending)
+  2026-11-01 07:30  Mochi  Morning walk       (daily, pending)
 ```
 
 ## 🧪 Testing PawPal+
@@ -75,14 +94,14 @@ Sample test output:
 
 ## 📐 Smarter Scheduling
 
-> Fill in once you've implemented scheduling logic.
-
 | Feature | Method(s) | Notes |
 |---------|-----------|-------|
-| Task sorting | | e.g., by priority, duration |
-| Filtering | | e.g., skip tasks if time runs out |
-| Conflict handling | | e.g., overlapping time slots |
-| Recurring tasks | | e.g., daily vs. weekly |
+| Sorting | `Scheduler.sort_by_time()` | Orders (pet, task) pairs by the zero-padded `"HH:MM"` string with `sorted()` and a lambda key. `get_todays_schedule()` applies it to tasks due today. |
+| Filtering | `Scheduler.filter_tasks(pet_name, completed)` | Filters by pet name (case-insensitive), completion status, or both. Passing `None` skips that filter. |
+| Conflict detection | `Scheduler.detect_conflicts()` | Groups pending tasks by `(due_date, time)` and returns one warning string per slot with more than one task, across the same or different pets. It never raises. |
+| Recurring tasks | `Task.mark_complete()`, `Scheduler.mark_task_complete()` | Completing a `daily` or `weekly` task creates a copy due `timedelta(days=1)` or `timedelta(weeks=1)` later and adds it to the pet. `once` tasks do not recur. |
+
+**Tradeoff:** conflicts are exact time matches only. A 30-minute walk at 08:00 and a feeding at 08:15 are not flagged, because tasks have a start time and duration but the check ignores duration.
 
 ## 📸 Demo Walkthrough
 

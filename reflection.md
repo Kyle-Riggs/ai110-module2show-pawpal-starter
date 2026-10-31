@@ -37,8 +37,11 @@ I reviewed the first skeleton and made two changes before implementing anything:
 
 **b. Tradeoffs**
 
-- Describe one tradeoff your scheduler makes.
-- Why is that tradeoff reasonable for this scenario?
+The scheduler's conflict detection only flags tasks with the exact same date and start time. It ignores duration, so a 30-minute walk at 08:00 and a feeding at 08:15 are not reported even though they overlap.
+
+I chose this because it is simple to explain and test: group pending tasks by `(due_date, time)` and warn on any group larger than one. Overlap detection would need start/end times, handling for tasks that cross midnight, and a decision about whether back-to-back tasks count as conflicts. For a household with one owner, exact collisions are the most obvious scheduling mistake. A missed near-overlap is a minor annoyance that the owner can see in the sorted schedule.
+
+I also reviewed `detect_conflicts` for readability. A nested-loop version comparing every pair of tasks is shorter to write but is O(n²) and reports each three-way clash as three separate warnings. Grouping with `defaultdict` is a little longer but runs in one pass and yields one clear warning per time slot, so I kept it.
 
 ---
 
