@@ -79,18 +79,50 @@ Filter: Mochi's pending tasks
 ## 🧪 Testing PawPal+
 
 ```bash
-# Run the full test suite:
-pytest
-
-# Run with coverage:
-pytest --cov
+python -m pytest
 ```
+
+The suite in `tests/test_pawpal.py` has 21 tests covering:
+
+- **Basics:** `Task.mark_complete()` changes status; `Pet.add_task()` increases the task count.
+- **Sorting:** tasks come back in chronological order across pets, zero-padded times sort correctly (`09:05` before `10:00`), and today's schedule excludes tasks due on other dates.
+- **Recurrence:** completing a daily task creates one due the next day, a weekly task one week later, a `once` task creates nothing, and a daily task on Jan 31 rolls over to Feb 1.
+- **Conflict detection:** same time on different pets or the same pet is flagged, a three-way clash gives one warning, and different times, different dates, and already-completed tasks are not flagged.
+- **Filtering:** by pet name (case-insensitive), by completion status, by both, and for an unknown pet.
+- **Empty cases:** an owner with no tasks and a pet with no tasks.
 
 Sample test output:
 
 ```
-# Paste your pytest output here
+============================= test session starts =============================
+collecting ... collected 21 items
+
+tests/test_pawpal.py::test_mark_complete_changes_status PASSED           [  4%]
+tests/test_pawpal.py::test_adding_task_increases_pet_task_count PASSED   [  9%]
+tests/test_pawpal.py::test_sort_by_time_returns_chronological_order PASSED [ 14%]
+tests/test_pawpal.py::test_sort_handles_zero_padded_times_around_ten PASSED [ 19%]
+tests/test_pawpal.py::test_todays_schedule_is_sorted_and_excludes_other_dates PASSED [ 23%]
+tests/test_pawpal.py::test_schedule_for_owner_with_no_tasks_is_empty PASSED [ 28%]
+tests/test_pawpal.py::test_pet_with_no_tasks_does_not_break_other_pets PASSED [ 33%]
+tests/test_pawpal.py::test_completing_daily_task_creates_task_for_next_day PASSED [ 38%]
+tests/test_pawpal.py::test_completing_weekly_task_creates_task_a_week_later PASSED [ 42%]
+tests/test_pawpal.py::test_completing_one_time_task_creates_no_new_task PASSED [ 47%]
+tests/test_pawpal.py::test_daily_recurrence_rolls_over_month_end PASSED  [ 52%]
+tests/test_pawpal.py::test_conflict_detected_for_same_time_across_pets PASSED [ 57%]
+tests/test_pawpal.py::test_conflict_detected_for_same_time_on_same_pet PASSED [ 61%]
+tests/test_pawpal.py::test_three_way_clash_produces_single_warning PASSED [ 66%]
+tests/test_pawpal.py::test_no_conflict_for_different_times PASSED        [ 71%]
+tests/test_pawpal.py::test_no_conflict_for_same_time_on_different_dates PASSED [ 76%]
+tests/test_pawpal.py::test_completed_task_is_not_a_conflict PASSED       [ 80%]
+tests/test_pawpal.py::test_filter_by_pet_name_is_case_insensitive PASSED [ 85%]
+tests/test_pawpal.py::test_filter_by_completion_status PASSED            [ 90%]
+tests/test_pawpal.py::test_filter_combines_pet_and_status PASSED         [ 95%]
+tests/test_pawpal.py::test_filter_unknown_pet_returns_empty PASSED       [100%]
+
+============================= 21 passed in 0.03s ==============================
 ```
+
+**Confidence Level: ★★★★☆ (4/5).** The core scheduling logic is covered on both happy paths and edge cases, and all 21 tests pass. I stopped short of five stars because conflict detection only matches exact start times (overlapping durations are not caught), times are not validated (`"8:00"` or `"25:99"` would be accepted), and the Streamlit UI is not covered by automated tests.
 
 ## 📐 Smarter Scheduling
 
